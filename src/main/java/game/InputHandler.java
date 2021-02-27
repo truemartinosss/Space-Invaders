@@ -11,8 +11,8 @@ import actors.Player;
  */
 public class InputHandler {
 
-	private Invaders invaders = null;
-	private Player player  = null;
+	private Invaders invaders;
+	private Player player;
 	public Action action;
 
 	public InputHandler(Invaders invaders, Player player) {
@@ -25,15 +25,13 @@ public class InputHandler {
 			if (KeyEvent.VK_ENTER == event.getKeyCode()) {
 				if (invaders.gameOver || invaders.gameWon) {
 					invaders.initWorld();
-					invaders.game();
 				}
-			}
-
-			else
+			} else {
 				player.keyPressed(event);
-		}
-		else if (action == Action.RELSEASE)
+			}
+		} else if (action == Action.RELSEASE) {
 			player.keyReleased(event);
+		}
 	}
 
 	public enum Action {

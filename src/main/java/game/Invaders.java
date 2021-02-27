@@ -16,7 +16,6 @@ import java.awt.image.BufferStrategy;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 
-
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
@@ -59,7 +58,7 @@ public class Invaders extends Stage implements KeyListener {
 		frame.setVisible(true);
 
 		//cleanup resources on exit
-		frame.addWindowListener( new WindowAdapter() {
+		frame.addWindowListener(new WindowAdapter() {
 			          public void windowClosing(WindowEvent e) {
 			        	ResourceLoader.getInstance().cleanup();
 			            System.exit(0);
@@ -74,11 +73,6 @@ public class Invaders extends Stage implements KeyListener {
 		strategy = getBufferStrategy();
 		requestFocus();
 		initWorld();
-
-		keyPressedHandler = new InputHandler(this, player);
-		keyPressedHandler.action = InputHandler.Action.PRESS;
-		keyReleasedHandler = new InputHandler(this, player);
-		keyReleasedHandler.action = InputHandler.Action.RELSEASE;
 	}
 
 	/**
@@ -129,6 +123,11 @@ public class Invaders extends Stage implements KeyListener {
 		backgroundY = backgroundTile.getHeight();
 
 		addInvaders();
+
+		keyPressedHandler = new InputHandler(this, player);
+		keyPressedHandler.action = InputHandler.Action.PRESS;
+		keyReleasedHandler = new InputHandler(this, player);
+		keyReleasedHandler.action = InputHandler.Action.RELSEASE;
 	}
 
 	public void paintWorld() {
@@ -142,8 +141,7 @@ public class Invaders extends Stage implements KeyListener {
 		g.drawImage( background,0,0,Stage.WIDTH,Stage.HEIGHT,0,backgroundY,Stage.WIDTH,backgroundY+Stage.HEIGHT,this);
 
 		//paint the actors
-		for (int i = 0; i < actors.size(); i++) {
-			Actor actor = actors.get(i);
+		for (Actor actor : actors) {
 			actor.paint(g);
 		}
 
@@ -165,11 +163,11 @@ public class Invaders extends Stage implements KeyListener {
 		g.setFont(new Font("Arial",Font.BOLD,50));
 		g.setColor(Color.RED);
 		int xPos = getWidth()/2 - 155;
-		g.drawString("GAME OVER",(xPos < 0 ? 0 : xPos),getHeight()/2);
+		g.drawString("GAME OVER",(Math.max(xPos, 0)),getHeight()/2);
 
 		xPos += 30;
 		g.setFont(new Font("Arial",Font.BOLD,30));
-		g.drawString("ENTER: try again",(xPos < 0 ? 0 : xPos),getHeight()/2 + 50);
+		g.drawString("ENTER: try again",(Math.max(xPos, 0)),getHeight()/2 + 50);
 
 		strategy.show();
 	}
@@ -185,21 +183,20 @@ public class Invaders extends Stage implements KeyListener {
 		g.setFont(new Font("Arial",Font.BOLD,50));
 		g.setColor(Color.RED);
 		int xPos = getWidth()/2 - 145;
-		g.drawString("GAME WON",(xPos < 0 ? 0 : xPos),getHeight()/2);
+		g.drawString("GAME WON",(Math.max(xPos, 0)),getHeight()/2);
 
 		xPos += 20;
 		g.setFont(new Font("Arial",Font.BOLD,30));
-		g.drawString("ENTER: try again",(xPos < 0 ? 0 : xPos),getHeight()/2 + 50);
+		g.drawString("ENTER: try again",(Math.max(xPos, 0)),getHeight()/2 + 50);
 
 		strategy.show();
 	}
 
 	public void paintFPS(Graphics g) {
+		long maxFps = 1000 / (usedTime > 0 ? usedTime : 1);
+		long fps = maxFps > DESIRED_FPS ? DESIRED_FPS : maxFps;
 		g.setColor(Color.RED);
-		if (usedTime > 0)
-			g.drawString(String.valueOf(1000/usedTime)+" fps",0,Stage.HEIGHT-50);
-		else
-			g.drawString("--- fps",0,Stage.HEIGHT-50);
+		g.drawString(fps +" fps",0,Stage.HEIGHT-50);
 	}
 
 	public void paintScore(Graphics g) {
@@ -244,8 +241,7 @@ public class Invaders extends Stage implements KeyListener {
 	private void checkCollision(Actor actor) {
 
 		Rectangle actorBounds = actor.getBounds();
-		for (int i = 0; i < actors.size(); i ++) {
-			Actor otherActor = actors.get(i);
+		for (Actor otherActor : actors) {
 			if (null == otherActor || actor.equals(otherActor)) continue;
 			if (actorBounds.intersects(otherActor.getBounds())) {
 				actor.collision(otherActor);
@@ -269,39 +265,33 @@ public class Invaders extends Stage implements KeyListener {
 		while(isVisible()) {
 			long startTime = System.currentTimeMillis();
 
-			backgroundY--;
-			if (backgroundY < 0)
-				backgroundY = backgroundTile.getHeight();
-
 			if (super.gameOver) {
 				paintGameOver();
-				break;
-			}
-			else if (super.gameWon) {
+			} else if (super.gameWon) {
 				paintGameWon();
-				break;
+			} else {
+				backgroundY--;
+				if (backgroundY < 0) {
+					backgroundY = backgroundTile.getHeight();
+				}
+				int random = (int) (Math.random() * 1000);
+				if (random == 700) {
+					Actor ufo = new Ufo(this);
+					ufo.setX(0);
+					ufo.setY(20);
+					ufo.setVx(1);
+					actors.add(ufo);
+				}
+				updateWorld();
+				paintWorld();
 			}
-
-			int random = (int)(Math.random()*1000);
-			if (random == 700) {
-				Actor ufo = new Ufo(this);
-				ufo.setX(0);
-				ufo.setY(20);
-				ufo.setVx(1);
-				actors.add(ufo);
-			}
-
-			updateWorld();
-			paintWorld();
 
 			usedTime = System.currentTimeMillis() - startTime;
-
 			//calculate sleep time
-			if (usedTime == 0) usedTime = 1;
-			int timeDiff = (int) ((1000/usedTime) - DESIRED_FPS);
+			int timeDiff = (int) (1000 / DESIRED_FPS - usedTime);
 			if (timeDiff > 0) {
 				try {
-					Thread.sleep(timeDiff/100);
+					Thread.sleep(timeDiff);
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
